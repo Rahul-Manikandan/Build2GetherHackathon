@@ -35,6 +35,7 @@ export default function CameraPage() {
         setLoading(true);
 
         try {
+            alert('Step 1/3: Preparing data...');
             const reportData = {
                 description,
                 latitude,
@@ -46,15 +47,19 @@ export default function CameraPage() {
             if (isOffline) {
                 const db1 = await openDB('erosion-reports', 1);
                 await db1.add('reports', { ...reportData, file, synced: false });
+                alert('Saved offline!');
             } else {
                 // Upload
+                alert('Step 2/3: Uploading image...');
                 const fileExt = file.name.split('.').pop() || 'jpg';
                 const fileName = `${Date.now()}_report.${fileExt}`;
                 const storageRef = ref(storage, `reports/${fileName}`);
 
                 const snapshot = await uploadBytes(storageRef, file);
+                alert('Image uploaded! Getting URL...');
                 const imageUrl = await getDownloadURL(snapshot.ref);
 
+                alert('Step 3/3: Saving to database...');
                 await addDoc(collection(db, 'reports'), {
                     ...reportData,
                     imageUrl,
@@ -62,6 +67,7 @@ export default function CameraPage() {
                 });
             }
 
+            alert('Success! taking you back...');
             router.push('/dashboard/reporter');
 
         } catch (error: any) {
@@ -74,7 +80,7 @@ export default function CameraPage() {
 
     if (step === 'camera') {
         return (
-            <div className="h-screen bg-black relative flex flex-col">
+            <div className="h-[100dvh] bg-black relative flex flex-col">
                 <div className="absolute top-4 left-4 z-50">
                     <Link href="/dashboard/reporter">
                         <Button variant="ghost" className="text-white hover:bg-white/20 rounded-full">

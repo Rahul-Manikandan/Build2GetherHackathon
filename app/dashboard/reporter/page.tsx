@@ -19,32 +19,44 @@ export default function ReporterDashboard() {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
-                // Real-time listener for reports
-                const q = query(collection(db, 'reports'), orderBy('timestamp', 'desc'), limit(20));
+                // Real-time listener
+                try {
+                    const q = query(collection(db, 'reports'), orderBy('timestamp', 'desc'), limit(20));
 
-                const unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
-                    const reports = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-                    setRecentReports(reports);
+                    const unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
+                        const reports = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+                        setRecentReports(reports);
 
-                    // Calc stats
-                    setStats({
-                        total: reports.length,
-                        pending: reports.filter((r: any) => r.status === 'pending').length,
-                        approved: reports.filter((r: any) => r.status === 'approved').length
+                        // Calc stats
+                        setStats({
+                            total: reports.length,
+                            pending: reports.filter((r: any) => r.status === 'pending').length,
+                            approved: reports.filter((r: any) => r.status === 'approved').length
+                        });
+
+                        // Check for resolved notifications (Client-side simulation for now)
+                        const newlyResolved = snapshot.docChanges().find(change =>
+                            change.type === 'modified' && change.doc.data().status === 'resolved'
+                        );
+                        if (newlyResolved) {
+                            setNotification(`Good news! Your report "${newlyResolved.doc.data().description.substring(0, 20)}..." has been resolved.`);
+                            setTimeout(() => setNotification(null), 5000);
+                        }
+
+                        setLoading(false);
+                    }, (error) => {
+                        console.error("Snapshot error:", error);
+                        setLoading(false);
                     });
+                    return () => unsubscribeSnapshot();
+                } catch (e) {
+                    console.error("Query setup error:", e);
+                    setLoading(false);
+                }
 
-                    // Check for resolved notifications (Client-side simulation for now)
-                    const newlyResolved = snapshot.docChanges().find(change =>
-                        change.type === 'modified' && change.doc.data().status === 'resolved'
-                    );
-                    if (newlyResolved) {
-                        setNotification(`Good news! Your report "${newlyResolved.doc.data().description.substring(0, 20)}..." has been resolved.`);
-                        setTimeout(() => setNotification(null), 5000);
-                    }
-                });
-                return () => unsubscribeSnapshot();
+            } else {
+                setLoading(false);
             }
-            setLoading(false);
         });
         return () => unsubscribe();
     }, []);
@@ -96,7 +108,7 @@ export default function ReporterDashboard() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search reports..."
-                    className="pl-10 h-12 bg-white border-none shadow-sm rounded-xl focus-visible:ring-primary"
+                    className="pl-10 h-12 bg-white text-slate-900 placeholder:text-slate-400 border-none shadow-sm rounded-xl focus-visible:ring-primary"
                 />
             </div>
 

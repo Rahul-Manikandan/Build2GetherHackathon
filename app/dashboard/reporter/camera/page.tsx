@@ -6,7 +6,7 @@ import { ArrowLeft, Check, MapPin, Loader2 } from 'lucide-react';
 import CameraCapture from '@/components/forms/CameraCapture';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useOfflineStatus } from '@/hooks/useOfflineStatus';
-import { db, storage } from '@/lib/firebase/config';
+import { db, storage, auth } from '@/lib/firebase/config';
 import { collection, addDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { openDB } from 'idb';
@@ -32,16 +32,27 @@ export default function CameraPage() {
 
     const handleSubmit = async () => {
         if (!file) return;
+
+        // 1. Auth Check
+        if (!auth.currentUser && !isOffline) {
+            alert("You seem to be logged out. Please sign in again.");
+            router.push('/signin');
+            return;
+        }
+
         setLoading(true);
         setStatusMsg('Initializing...');
 
         try {
+            let imageUrl = null;
             const reportData = {
                 description,
-                latitude,
-                longitude,
+                latitude: latitude || 0,
+                longitude: longitude || 0,
                 timestamp: new Date().toISOString(),
                 status: 'pending',
+                userId: auth.currentUser?.uid || 'anonymous',
+                userEmail: auth.currentUser?.email || 'anonymous'
             };
 
             if (isOffline) {
@@ -50,38 +61,52 @@ export default function CameraPage() {
                 await db1.add('reports', { ...reportData, file, synced: false });
                 alert('Saved offline!');
             } else {
-                // Upload
-                setStatusMsg('Uploading image (this may take a moment)...');
-                const fileExt = file.name.split('.').pop() || 'jpg';
-                const fileName = `${Date.now()}_report.${fileExt}`;
-                const storageRef = ref(storage, `reports/${fileName}`);
+                // 2. Upload with Timeout & Fallback
+                setStatusMsg('Uploading image...');
+                try {
+                    const fileExt = file.name.split('.').pop() || 'jpg';
+                    const fileName = `${Date.now()}_${auth.currentUser?.uid || 'anon'}.${fileExt}`;
+                    const storageRef = ref(storage, `reports/${fileName}`);
 
-                const snapshot = await uploadBytes(storageRef, file);
+                    // Create a timeout promise
+                    const timeout = new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error("Upload timed out")), 15000)
+                    );
 
-                setStatusMsg('Getting image URL...');
-                const imageUrl = await getDownloadURL(snapshot.ref);
+                    const snapshot: any = await Promise.race([
+                        uploadBytes(storageRef, file),
+                        timeout
+                    ]);
 
-                setStatusMsg('Saving report details...');
+                    imageUrl = await getDownloadURL(snapshot.ref);
+
+                } catch (uploadError: any) {
+                    console.error("Upload failed:", uploadError);
+                    alert(`Image upload failed (${uploadError.message}). Saving report without image.`);
+                    // Continue execution to save the report anyway
+                }
+
+                // 3. Save to Firestore
+                setStatusMsg('Saving details...');
                 await addDoc(collection(db, 'reports'), {
                     ...reportData,
-                    imageUrl,
+                    imageUrl, // will be null if upload failed
                     synced: true
                 });
             }
 
-            setStatusMsg('Done! Redirecting...');
-            alert('Report Submitted Successfully!');
+            setStatusMsg('Success! Redirecting...');
+            alert('Report Submitted!');
 
-            // Force hard redirect to ensure we leave this state
+            // 4. Force Redirect
             window.location.href = '/dashboard/reporter';
 
         } catch (error: any) {
             console.error("Submit error:", error);
-            alert(`Submission failed: ${error.message}. Please try again.`);
-            setLoading(false); // Only reset loading on error
-            setStatusMsg('');
+            alert(`Critical Error: ${error.message}`);
+            setLoading(false);
+            setStatusMsg('Error. Tap submit to retry.');
         }
-        // Note: We don't reset loading in 'finally' on success because we want to show 'Redirecting...'
     };
 
     if (step === 'camera') {

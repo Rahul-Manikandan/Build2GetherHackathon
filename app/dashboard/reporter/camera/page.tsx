@@ -2,9 +2,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Check, MapPin } from 'lucide-react';
+import { ArrowLeft, Check, MapPin, Loader2 } from 'lucide-react';
 import CameraCapture from '@/components/forms/CameraCapture';
-import { Input } from '@/components/ui/input';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useOfflineStatus } from '@/hooks/useOfflineStatus';
 import { db, storage } from '@/lib/firebase/config';
@@ -23,6 +22,7 @@ export default function CameraPage() {
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [description, setDescription] = useState('');
     const [loading, setLoading] = useState(false);
+    const [statusMsg, setStatusMsg] = useState('');
 
     const handleCapture = (capturedFile: File) => {
         setFile(capturedFile);
@@ -33,9 +33,9 @@ export default function CameraPage() {
     const handleSubmit = async () => {
         if (!file) return;
         setLoading(true);
+        setStatusMsg('Initializing...');
 
         try {
-            alert('Step 1/3: Preparing data...');
             const reportData = {
                 description,
                 latitude,
@@ -45,21 +45,23 @@ export default function CameraPage() {
             };
 
             if (isOffline) {
+                setStatusMsg('Saving locally...');
                 const db1 = await openDB('erosion-reports', 1);
                 await db1.add('reports', { ...reportData, file, synced: false });
                 alert('Saved offline!');
             } else {
                 // Upload
-                alert('Step 2/3: Uploading image...');
+                setStatusMsg('Uploading image (this may take a moment)...');
                 const fileExt = file.name.split('.').pop() || 'jpg';
                 const fileName = `${Date.now()}_report.${fileExt}`;
                 const storageRef = ref(storage, `reports/${fileName}`);
 
                 const snapshot = await uploadBytes(storageRef, file);
-                alert('Image uploaded! Getting URL...');
+
+                setStatusMsg('Getting image URL...');
                 const imageUrl = await getDownloadURL(snapshot.ref);
 
-                alert('Step 3/3: Saving to database...');
+                setStatusMsg('Saving report details...');
                 await addDoc(collection(db, 'reports'), {
                     ...reportData,
                     imageUrl,
@@ -67,15 +69,19 @@ export default function CameraPage() {
                 });
             }
 
-            alert('Success! taking you back...');
-            router.push('/dashboard/reporter');
+            setStatusMsg('Done! Redirecting...');
+            alert('Report Submitted Successfully!');
+
+            // Force hard redirect to ensure we leave this state
+            window.location.href = '/dashboard/reporter';
 
         } catch (error: any) {
             console.error("Submit error:", error);
             alert(`Submission failed: ${error.message}. Please try again.`);
-        } finally {
-            setLoading(false);
+            setLoading(false); // Only reset loading on error
+            setStatusMsg('');
         }
+        // Note: We don't reset loading in 'finally' on success because we want to show 'Redirecting...'
     };
 
     if (step === 'camera') {
@@ -103,7 +109,7 @@ export default function CameraPage() {
         <div className="min-h-screen bg-slate-50 flex flex-col">
             {/* Header */}
             <div className="bg-white p-4 flex items-center shadow-sm sticky top-0 z-10">
-                <Button variant="ghost" size="icon" onClick={() => setStep('camera')}>
+                <Button variant="ghost" size="icon" onClick={() => setStep('camera')} disabled={loading}>
                     <ArrowLeft className="w-5 h-5 text-slate-600" />
                 </Button>
                 <h1 className="ml-2 text-lg font-bold text-slate-800">Add Details</h1>
@@ -130,6 +136,7 @@ export default function CameraPage() {
                             onChange={(e) => setDescription(e.target.value)}
                             placeholder="What kind of erosion is this?"
                             className="w-full p-4 rounded-xl border border-slate-200 shadow-sm bg-white text-slate-900 placeholder:text-slate-400 min-h-[120px] focus:ring-2 focus:ring-primary focus:outline-none"
+                            disabled={loading}
                         />
                     </div>
                 </div>
@@ -143,8 +150,16 @@ export default function CameraPage() {
                     onClick={handleSubmit}
                     disabled={loading || !description}
                 >
-                    {loading ? 'Submitting...' : 'Submit Report'}
-                    {!loading && <Check className="ml-2 w-5 h-5" />}
+                    {loading ? (
+                        <>
+                            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                            {statusMsg || 'Submitting...'}
+                        </>
+                    ) : (
+                        <>
+                            Submit Report <Check className="ml-2 w-5 h-5" />
+                        </>
+                    )}
                 </Button>
             </div>
         </div>

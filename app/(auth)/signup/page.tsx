@@ -24,11 +24,9 @@ export default function SignUp() {
         setError('');
         try {
             await signUp(email, password, name, role);
-            if (role === 'supervisor') {
-                router.push('/dashboard/supervisor');
-            } else {
-                router.push('/dashboard/reporter');
-            }
+            // Success! Ask user to sign in
+            alert('Account created successfully! Please sign in.');
+            router.push('/signin');
         } catch (err: any) {
             setError(err.message || 'Failed to sign up.');
         } finally {

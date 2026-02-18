@@ -9,6 +9,11 @@ export default function BottomNav() {
 
     const isActive = (path: string) => pathname === path;
 
+    // Hide BottomNav on the Camera page to prevent confusion
+    if (pathname?.endsWith('/camera')) {
+        return null;
+    }
+
     return (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-6 py-3 flex justify-between items-center z-50">
             <Link

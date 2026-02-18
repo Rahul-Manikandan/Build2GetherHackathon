@@ -35,9 +35,6 @@ export default function CameraPage() {
         setLoading(true);
 
         try {
-            // ... Same logic as ReportForm ...
-            // Simplified for this view:
-
             const reportData = {
                 description,
                 latitude,
@@ -65,11 +62,11 @@ export default function CameraPage() {
                 });
             }
 
-            router.push('/dashboard/reporter'); // Go back to dashboard after submit
+            router.push('/dashboard/reporter');
 
-        } catch (error) {
+        } catch (error: any) {
             console.error("Submit error:", error);
-            // Handle error UI
+            alert(`Submission failed: ${error.message}. Please try again.`);
         } finally {
             setLoading(false);
         }
@@ -126,7 +123,7 @@ export default function CameraPage() {
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                             placeholder="What kind of erosion is this?"
-                            className="w-full p-4 rounded-xl border-none shadow-sm bg-white min-h-[120px] focus:ring-2 focus:ring-primary"
+                            className="w-full p-4 rounded-xl border border-slate-200 shadow-sm bg-white text-slate-900 placeholder:text-slate-400 min-h-[120px] focus:ring-2 focus:ring-primary focus:outline-none"
                         />
                     </div>
                 </div>

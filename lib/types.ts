@@ -5,6 +5,6 @@ export interface Report {
     longitude: number | null;
     imageUrl: string;
     timestamp: string;
-    status: 'pending' | 'reviewed' | 'resolved';
+    status: 'pending' | 'reviewed' | 'approved' | 'resolved';
     synced: boolean;
 }

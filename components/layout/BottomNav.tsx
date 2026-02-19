@@ -15,7 +15,7 @@ export default function BottomNav() {
     }
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-6 py-3 flex justify-between items-center z-50">
+        <div className="fixed bottom-0 md:bottom-6 left-0 right-0 md:left-1/2 md:-translate-x-1/2 bg-white/80 backdrop-blur-md border-t md:border border-slate-100 px-6 py-3 flex justify-between items-center z-50 md:w-[440px] md:rounded-3xl md:shadow-2xl md:shadow-primary/10">
             <Link
                 href="/dashboard/reporter"
                 className={cn(

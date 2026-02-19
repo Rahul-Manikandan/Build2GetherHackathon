@@ -6,11 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import CameraCapture from './CameraCapture';
-import { Camera, Upload, X } from 'lucide-react';
-import { db, storage } from '@/lib/firebase/config';
+import { Camera, Upload, X, Activity, AlertCircle, ArrowRight, Search } from 'lucide-react';
+import { db } from '@/lib/firebase/config';
 import { collection, addDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { openDB } from 'idb';
+import { processFileForAnalysis, AnalysisResult } from '@/lib/analysisEngine';
+import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 export default function ReportForm() {
     const { latitude, longitude, error: geoError } = useGeolocation();
@@ -21,9 +23,10 @@ export default function ReportForm() {
     const [isCameraOpen, setIsCameraOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
+    const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Clean up preview URL when component unmounts or file changes
     useEffect(() => {
         return () => {
             if (previewUrl && !previewUrl.startsWith('http')) {
@@ -32,12 +35,35 @@ export default function ReportForm() {
         };
     }, [previewUrl]);
 
+    const clearImage = () => {
+        setFile(null);
+        setPreviewUrl(null);
+        setAnalysis(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
+    const runAnalysis = async (capturedFile: File) => {
+        setIsAnalyzing(true);
+        try {
+            const result = await processFileForAnalysis(capturedFile);
+            setAnalysis(result);
+            setDescription(prev => prev || `Detected ${result.prediction} erosion. ${result.reasoning}. Soil type: ${result.soil.type}.`);
+        } catch (err) {
+            console.error("Analysis failed:", err);
+        } finally {
+            setIsAnalyzing(false);
+        }
+    };
+
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFile = e.target.files?.[0];
         if (selectedFile) {
             setFile(selectedFile);
             setPreviewUrl(URL.createObjectURL(selectedFile));
             setIsCameraOpen(false);
+            runAnalysis(selectedFile);
         }
     };
 
@@ -45,14 +71,7 @@ export default function ReportForm() {
         setFile(capturedFile);
         setPreviewUrl(URL.createObjectURL(capturedFile));
         setIsCameraOpen(false);
-    };
-
-    const clearImage = () => {
-        setFile(null);
-        setPreviewUrl(null);
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-        }
+        runAnalysis(capturedFile);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -67,10 +86,10 @@ export default function ReportForm() {
                 longitude,
                 timestamp: new Date().toISOString(),
                 status: 'pending',
+                analysis: analysis,
             };
 
             if (isOffline) {
-                // Save to IndexedDB
                 const db1 = await openDB('erosion-reports', 1, {
                     upgrade(db) {
                         if (!db.objectStoreNames.contains('reports')) {
@@ -80,44 +99,26 @@ export default function ReportForm() {
                 });
                 await db1.add('reports', { ...reportData, file, synced: false });
                 setMessage('You are offline. Report saved locally and will sync later.');
-                // Reset form
                 setDescription('');
                 clearImage();
             } else {
-                // Upload image if exists
                 let imageUrl = '';
                 if (file) {
                     try {
-                        console.log('Starting upload...');
-                        // Sanitize filename
-                        const fileExt = file.name.split('.').pop() || 'jpg';
-                        const sanitizedBaseName = file.name.split('.').slice(0, -1).join('.').replace(/[^a-zA-Z0-9]/g, '_');
-                        const fileName = `${Date.now()}_${sanitizedBaseName}.${fileExt}`;
-
-                        const storageRef = ref(storage, `reports/${fileName}`);
-                        console.log('Uploading to:', `reports/${fileName}`);
-
-                        const snapshot = await uploadBytes(storageRef, file);
-                        console.log('Upload successful:', snapshot);
-
-                        imageUrl = await getDownloadURL(storageRef);
-                        console.log('Download URL:', imageUrl);
+                        const { uploadToCloudinary } = await import('@/lib/cloudinary');
+                        imageUrl = await uploadToCloudinary(file);
                     } catch (uploadError: any) {
-                        console.error('Upload failed:', uploadError);
+                        console.error('Cloudinary upload failed:', uploadError);
                         throw new Error(`Image upload failed: ${uploadError.message}`);
                     }
                 }
 
-                // Save to Firestore
-                console.log('Saving to Firestore...');
                 await addDoc(collection(db, 'reports'), {
                     ...reportData,
                     imageUrl,
                     synced: true
                 });
                 setMessage('Report submitted successfully!');
-
-                // Reset form
                 setDescription('');
                 clearImage();
             }
@@ -131,64 +132,81 @@ export default function ReportForm() {
     };
 
     return (
-        <Card className="w-full max-w-lg mx-auto shadow-lg border-slate-200">
-            <CardHeader className="bg-slate-50 border-b border-slate-100">
-                <CardTitle className="text-xl font-bold text-slate-800">Submit Erosion Report</CardTitle>
+        <Card className="w-full max-w-lg mx-auto shadow-2xl shadow-slate-200/50 border-white/40 bg-white/80 backdrop-blur-xl rounded-[2rem] md:rounded-[3rem] overflow-hidden">
+            <CardHeader className="bg-slate-50/50 border-b border-white p-6 md:p-8">
+                <div className="flex items-center gap-3 mb-2">
+                    <div className="w-8 h-8 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary/20">
+                        <Activity className="w-4 h-4" />
+                    </div>
+                    <span className="text-[10px] font-bold text-primary uppercase tracking-[0.2em]">Live Data Module</span>
+                </div>
+                <CardTitle className="text-2xl font-black text-[#1A1C3D] tracking-tight">Erosion Report</CardTitle>
             </CardHeader>
-            <CardContent className="p-6">
+            <CardContent className="p-6 md:p-8">
                 {isOffline && (
-                    <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3 mb-4 rounded-md text-sm flex items-center">
-                        <span className="mr-2">⚠️</span> You are currently offline. Reports will be saved to your device.
+                    <div className="bg-amber-50 border border-amber-100 text-amber-800 p-4 mb-6 rounded-2xl text-[11px] font-bold flex items-center gap-3 animate-in fade-in slide-in-from-top-1">
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                        <span>OFFLINE MODE: Reports will sync when connection returns.</span>
                     </div>
                 )}
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-2">Description</label>
+                <form onSubmit={handleSubmit} className="space-y-8">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 ml-4">Observations</label>
                         <textarea
-                            className="flex min-h-[120px] w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-transparent transition-all"
-                            placeholder="Describe the soil erosion details..."
+                            className="flex min-h-[140px] w-full rounded-3xl border-transparent bg-slate-50 px-4 py-4 text-sm placeholder:text-slate-300 focus-visible:outline-none focus:bg-white focus:ring-2 focus:ring-primary/10 focus:border-primary/20 transition-all leading-relaxed"
+                            placeholder="Describe the soil condition, depth, and environmental factors..."
                             value={description}
                             onChange={e => setDescription(e.target.value)}
                             required
                         />
                     </div>
 
-                    <div className="text-sm bg-slate-50 p-3 rounded-md border border-slate-200 flex flex-col gap-1">
-                        <div className="flex justify-between items-center">
-                            <span className="font-semibold text-slate-700">Location</span>
-                            <span className="text-xs font-mono bg-slate-200 px-2 py-1 rounded text-slate-600">
-                                {latitude ? 'GPS LOCKED' : 'SEARCHING...'}
-                            </span>
+                    <div className="bg-[#1A1C3D] p-5 rounded-3xl text-white shadow-xl shadow-indigo-900/10 relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-primary/20 rounded-full blur-2xl -mr-12 -mt-12 group-hover:bg-primary/30 transition-colors" />
+                        <div className="relative flex flex-col gap-2">
+                            <div className="flex justify-between items-center">
+                                <span className="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em]">Geolocation</span>
+                                <span className={cn(
+                                    "px-2 py-0.5 rounded-full text-[9px] font-black tracking-tighter",
+                                    latitude ? "bg-emerald-500/20 text-emerald-400" : "bg-primary/20 text-primary animate-pulse"
+                                )}>
+                                    {latitude ? 'LOCKED' : 'SCANNING'}
+                                </span>
+                            </div>
+                            <div className="text-lg font-bold font-mono tracking-tight text-white/90">
+                                {latitude ? `${latitude.toFixed(5)}, ${longitude?.toFixed(5)}` : '0.00000, 0.00000'}
+                            </div>
+                            {geoError && <span className="text-[10px] text-red-400 font-bold mt-1">{geoError}</span>}
                         </div>
-                        <div className="text-slate-600 font-mono text-xs mt-1">
-                            {latitude ? `${latitude.toFixed(6)}, ${longitude?.toFixed(6)}` : 'Fetching coordinates...'}
-                        </div>
-                        {geoError && <span className="text-red-500 block text-xs mt-1 font-medium">{geoError}</span>}
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-2">Photo Evidence</label>
+                    <div className="space-y-4">
+                        <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 ml-4">Visual Evidence</label>
 
                         {!isCameraOpen && !previewUrl && (
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-2 gap-4">
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    className="h-24 flex flex-col gap-2 border-dashed border-2 hover:bg-slate-50 hover:border-blue-400 transition-all"
+                                    className="h-28 flex flex-col gap-3 border-dashed border-2 bg-slate-50/50 border-slate-100 rounded-3xl hover:bg-primary/5 hover:border-primary/30 hover:text-primary transition-all group"
                                     onClick={() => setIsCameraOpen(true)}
                                 >
-                                    <Camera className="h-6 w-6 text-slate-500" />
-                                    <span>Take Photo</span>
+                                    <div className="w-10 h-10 bg-white rounded-2xl shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <Camera className="h-5 w-5 text-slate-400 group-hover:text-primary" />
+                                    </div>
+                                    <span className="text-[10px] font-black uppercase tracking-widest">Camera</span>
                                 </Button>
                                 <div className="relative">
                                     <Button
                                         type="button"
                                         variant="outline"
-                                        className="w-full h-24 flex flex-col gap-2 border-dashed border-2 hover:bg-slate-50 hover:border-blue-400 transition-all"
+                                        className="w-full h-28 flex flex-col gap-3 border-dashed border-2 bg-slate-50/50 border-slate-100 rounded-3xl hover:bg-primary/5 hover:border-primary/30 hover:text-primary transition-all group"
                                         onClick={() => fileInputRef.current?.click()}
                                     >
-                                        <Upload className="h-6 w-6 text-slate-500" />
-                                        <span>Upload File</span>
+                                        <div className="w-10 h-10 bg-white rounded-2xl shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
+                                            <Upload className="h-5 w-5 text-slate-400 group-hover:text-primary" />
+                                        </div>
+                                        <span className="text-[10px] font-black uppercase tracking-widest">Library</span>
                                     </Button>
                                     <Input
                                         ref={fileInputRef}
@@ -202,44 +220,87 @@ export default function ReportForm() {
                         )}
 
                         {isCameraOpen && (
-                            <CameraCapture
-                                onCapture={handleCameraCapture}
-                                onCancel={() => setIsCameraOpen(false)}
-                            />
+                            <div className="rounded-[2.5rem] overflow-hidden border border-slate-100 shadow-xl">
+                                <CameraCapture
+                                    onCapture={handleCameraCapture}
+                                    onCancel={() => setIsCameraOpen(false)}
+                                />
+                            </div>
                         )}
 
                         {previewUrl && (
-                            <div className="relative rounded-lg overflow-hidden border border-slate-200 bg-slate-50">
-                                <img src={previewUrl} alt="Preview" className="w-full h-64 object-cover" />
-                                <div className="absolute top-2 right-2 flex gap-2">
+                            <div className="relative rounded-[2.5rem] overflow-hidden border border-slate-100 bg-slate-50 group">
+                                <img src={previewUrl} alt="Preview" className="w-full aspect-video object-cover transition-transform duration-700 group-hover:scale-105" />
+
+                                {isAnalyzing && (
+                                    <div className="absolute inset-0 bg-[#1A1C3D]/60 backdrop-blur-md flex flex-col items-center justify-center text-white p-6 text-center">
+                                        <div className="relative w-16 h-16 mb-4">
+                                            <div className="absolute inset-0 border-2 border-primary/20 rounded-full" />
+                                            <div className="absolute inset-0 border-2 border-primary rounded-full border-t-transparent animate-spin" />
+                                            <Activity className="absolute inset-0 m-auto w-6 h-6 text-primary" />
+                                        </div>
+                                        <p className="text-xs font-black uppercase tracking-[0.2em] mb-1">AI Scan Underway</p>
+                                        <p className="text-[10px] text-white/60">Decoding soil patterns...</p>
+                                    </div>
+                                )}
+
+                                <div className="absolute top-4 right-4 flex gap-2">
                                     <Button
                                         type="button"
                                         size="icon"
                                         variant="destructive"
-                                        className="h-8 w-8 rounded-full shadow-md"
+                                        className="h-10 w-10 rounded-2xl shadow-xl flex items-center justify-center bg-red-500 hover:bg-red-600 border-none transition-all active:scale-95"
                                         onClick={clearImage}
-                                        title="Remove image"
                                     >
-                                        <X className="h-4 w-4" />
+                                        <X className="h-5 w-5" />
                                     </Button>
                                 </div>
-                                <div className="p-2 text-xs text-center text-slate-500 bg-white border-t border-slate-100">
-                                    {file?.name}
+                            </div>
+                        )}
+
+                        {analysis && (
+                            <div className="mt-4 p-5 bg-[#F8FAFF] rounded-3xl border border-indigo-50 space-y-4 animate-in fade-in slide-in-from-top-2">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-6 h-6 bg-primary/10 rounded-lg flex items-center justify-center">
+                                        <Activity className="w-3.5 h-3.5 text-primary" />
+                                    </div>
+                                    <span className="text-[10px] font-black text-[#1A1C3D] uppercase tracking-widest">Intelligence Snapshot</span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="bg-white p-3 rounded-2xl border border-white shadow-sm transition-all hover:border-primary/20">
+                                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-1">Severity</p>
+                                        <p className="text-xs font-black text-[#1A1C3D]">{analysis.prediction}</p>
+                                    </div>
+                                    <div className="bg-white p-3 rounded-2xl border border-white shadow-sm transition-all hover:border-primary/20">
+                                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-1">Structure</p>
+                                        <p className="text-xs font-black text-[#1A1C3D]">{analysis.soil.type}</p>
+                                    </div>
+                                </div>
+                                <div className="p-3 bg-white/60 rounded-2xl border border-white text-[10px] font-medium text-slate-600 leading-relaxed italic">
+                                    "{analysis.reasoning}"
                                 </div>
                             </div>
                         )}
                     </div>
 
-                    <Button
-                        type="submit"
-                        className="w-full h-11 text-base font-medium shadow-md transition-all hover:translate-y-[-1px]"
-                        disabled={loading || (!latitude && !isOffline)}
-                    >
-                        {loading ? 'Submitting Report...' : 'Submit Report'}
-                    </Button>
+                    <div className="pt-4">
+                        <Button
+                            type="submit"
+                            className="w-full h-16 text-base font-black uppercase tracking-widest shadow-2xl shadow-primary/30 transition-all hover:translate-y-[-2px] active:scale-[0.98] rounded-3xl bg-primary text-white overflow-hidden group relative"
+                            disabled={loading || (!latitude && !isOffline)}
+                        >
+                            {loading ? 'Processing Protocol...' : 'Confirm Submission'}
+                            {!loading && <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />}
+                        </Button>
+                    </div>
 
                     {message && (
-                        <div className={`p-3 rounded-md text-sm font-medium text-center animate-in fade-in slide-in-from-bottom-2 ${message.includes('Failed') ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`}>
+                        <div className={cn(
+                            "p-4 rounded-2xl text-xs font-bold text-center animate-in zoom-in-95 duration-300",
+                            message.includes('Failed')
+                                ? "bg-red-50 text-red-600 border border-red-100"
+                                : "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                        )}>
                             {message}
                         </div>
                     )}

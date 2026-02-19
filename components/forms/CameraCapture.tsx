@@ -75,7 +75,7 @@ export default function CameraCapture({ onCapture, onCancel }: CameraCaptureProp
     };
 
     return (
-        <div className="relative w-full h-[400px] bg-slate-900 rounded-lg overflow-hidden flex flex-col items-center justify-center">
+        <div className="relative w-full h-full bg-slate-900 rounded-lg overflow-hidden flex flex-col items-center justify-center">
             {isLoading && !error && (
                 <div className="absolute inset-0 flex items-center justify-center text-white z-20">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>

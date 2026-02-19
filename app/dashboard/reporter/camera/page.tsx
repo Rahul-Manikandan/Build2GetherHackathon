@@ -6,11 +6,12 @@ import { ArrowLeft, Check, MapPin, Loader2 } from 'lucide-react';
 import CameraCapture from '@/components/forms/CameraCapture';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useOfflineStatus } from '@/hooks/useOfflineStatus';
-import { db, storage, auth } from '@/lib/firebase/config';
+import { db, auth } from '@/lib/firebase/config';
 import { collection, addDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { openDB } from 'idb';
 import Link from 'next/link';
+import { processFileForAnalysis, AnalysisResult } from '@/lib/analysisEngine';
+import { AlertCircle, Activity, Droplets } from 'lucide-react';
 
 export default function CameraPage() {
     const router = useRouter();
@@ -23,11 +24,25 @@ export default function CameraPage() {
     const [description, setDescription] = useState('');
     const [loading, setLoading] = useState(false);
     const [statusMsg, setStatusMsg] = useState('');
+    const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-    const handleCapture = (capturedFile: File) => {
+    const handleCapture = async (capturedFile: File) => {
         setFile(capturedFile);
         setPreviewUrl(URL.createObjectURL(capturedFile));
         setStep('details');
+
+        // Run analysis
+        setIsAnalyzing(true);
+        try {
+            const result = await processFileForAnalysis(capturedFile);
+            setAnalysis(result);
+            setDescription(prev => prev || `Detected ${result.prediction} erosion. ${result.reasoning}. Soil type: ${result.soil.type}.`);
+        } catch (err) {
+            console.error("Analysis failed:", err);
+        } finally {
+            setIsAnalyzing(false);
+        }
     };
 
     const handleSubmit = async () => {
@@ -51,7 +66,8 @@ export default function CameraPage() {
                 timestamp: new Date().toISOString(),
                 status: 'pending',
                 userId: auth.currentUser?.uid || 'anonymous',
-                userEmail: auth.currentUser?.email || 'anonymous'
+                userEmail: auth.currentUser?.email || 'anonymous',
+                analysis: analysis // Save AI analysis result
             };
 
             if (isOffline) {
@@ -60,31 +76,16 @@ export default function CameraPage() {
                 await db1.add('reports', { ...reportData, file, synced: false });
                 alert('Saved offline!');
             } else {
-                // Upload
-                setStatusMsg('Uploading image (Timeout: 60s)...');
-                console.log("Starting upload to bucket:", storage.app.options.storageBucket);
-
+                // Upload to Cloudinary
+                setStatusMsg('Uploading image to Cloudinary...');
                 try {
-                    const fileExt = file.name.split('.').pop() || 'jpg';
-                    const fileName = `${Date.now()}_${auth.currentUser?.uid || 'anon'}.${fileExt}`;
-                    const storageRef = ref(storage, `reports/${fileName}`);
-
-                    // Timeout: 60 seconds
-                    const timeout = new Promise((_, reject) =>
-                        setTimeout(() => reject(new Error("Upload timed out (60s)")), 60000)
-                    );
-
-                    const snapshot: any = await Promise.race([
-                        uploadBytes(storageRef, file),
-                        timeout
-                    ]);
-
-                    imageUrl = await getDownloadURL(snapshot.ref);
-                    console.log("Upload success, URL:", imageUrl);
-
+                    // Import dynamically to avoid SSR issues if any, though this is client-side
+                    const { uploadToCloudinary } = await import('@/lib/cloudinary');
+                    imageUrl = await uploadToCloudinary(file);
+                    console.log("Cloudinary Upload success, URL:", imageUrl);
                 } catch (uploadError: any) {
-                    console.error("Upload failed:", uploadError);
-                    alert(`Image upload failed: ${uploadError.message}. Saving report text only.`);
+                    console.error("Cloudinary Upload failed:", uploadError);
+                    alert(`Cloudinary upload failed: ${uploadError.message}. Saving report text only.`);
                 }
 
                 setStatusMsg('Saving details...');
@@ -142,11 +143,50 @@ export default function CameraPage() {
                     {previewUrl && (
                         <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
                     )}
-                    <div className="absolute bottom-3 right-3 bg-black/60 text-white px-3 py-1 rounded-full text-xs flex items-center">
+                    <div className="absolute bottom-3 right-3 bg-black/60 text-white px-3 py-1 rounded-full text-xs flex items-center backdrop-blur-sm">
                         <MapPin className="w-3 h-3 mr-1" />
                         {latitude ? `${latitude.toFixed(4)}, ${longitude?.toFixed(4)}` : 'Locating...'}
                     </div>
+
+                    {isAnalyzing && (
+                        <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex flex-col items-center justify-center text-white">
+                            <Loader2 className="w-8 h-8 animate-spin mb-2" />
+                            <p className="text-sm font-medium">Analyzing Soil Patterns...</p>
+                        </div>
+                    )}
                 </div>
+
+                {/* AI Analysis Result */}
+                {analysis && (
+                    <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                                <Activity className="w-4 h-4 text-primary" />
+                            </div>
+                            <h2 className="font-bold text-slate-900">AI Analysis Result</h2>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Prediction</p>
+                                <p className={`font-bold text-sm ${analysis.prediction.includes('Severe') ? 'text-red-600' : analysis.prediction.includes('Moderate') ? 'text-orange-600' : 'text-green-600'}`}>
+                                    {analysis.prediction}
+                                </p>
+                            </div>
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Soil Type</p>
+                                <p className="font-bold text-sm text-slate-700">{analysis.soil.type}</p>
+                            </div>
+                        </div>
+
+                        <div className="mt-4 p-3 bg-blue-50/50 rounded-xl border border-blue-100 flex gap-3">
+                            <AlertCircle className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                            <p className="text-xs text-blue-700 leading-relaxed font-medium">
+                                {analysis.reasoning}
+                            </p>
+                        </div>
+                    </div>
+                )}
 
                 <div className="space-y-4">
                     <div>

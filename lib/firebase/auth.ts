@@ -4,9 +4,13 @@ import {
     signInWithEmailAndPassword,
     signOut as firebaseSignOut,
     updateProfile,
+    GoogleAuthProvider,
+    signInWithPopup,
     User
 } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
+
+const googleProvider = new GoogleAuthProvider();
 
 export const signUp = async (email: string, password: string, name: string, role: 'reporter' | 'supervisor') => {
     try {
@@ -33,6 +37,31 @@ export const signUp = async (email: string, password: string, name: string, role
 export const signIn = async (email: string, password: string) => {
     try {
         return await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+        throw error;
+    }
+};
+
+export const signInWithGoogle = async () => {
+    try {
+        const result = await signInWithPopup(auth, googleProvider);
+        const user = result.user;
+
+        // Check if user document exists in Firestore
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+
+        if (!userDoc.exists()) {
+            // Create user document for first time Google sign-in (default to reporter)
+            await setDoc(doc(db, "users", user.uid), {
+                uid: user.uid,
+                name: user.displayName || "Google User",
+                email: user.email,
+                role: 'reporter', // Default role for Google sign-in
+                createdAt: new Date().toISOString()
+            });
+        }
+
+        return user;
     } catch (error) {
         throw error;
     }

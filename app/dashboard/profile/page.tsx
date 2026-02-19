@@ -15,7 +15,7 @@ export default function ProfilePage() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans p-6 pb-24">
+        <div className="max-w-2xl mx-auto min-h-screen bg-slate-50 font-sans p-4 md:p-8 pb-24">
             <header className="flex items-center gap-4 mb-8">
                 <Link href="/dashboard/reporter">
                     <Button variant="ghost" size="icon" className="rounded-full">

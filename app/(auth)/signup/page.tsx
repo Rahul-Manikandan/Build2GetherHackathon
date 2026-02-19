@@ -20,17 +20,14 @@ export default function SignUp() {
 
         tl.from(".auth-header > *", {
             y: 40,
-            opacity: 0,
             stagger: 0.1,
         })
             .from(".auth-card", {
                 scale: 0.95,
-                opacity: 0,
                 duration: 1,
             }, "-=0.8")
             .from(".auth-footer", {
                 y: 10,
-                opacity: 0,
             }, "-=0.4");
     }, { scope: container });
     const [name, setName] = useState('');
@@ -108,7 +105,7 @@ export default function SignUp() {
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
                                     required
-                                    className="h-14 bg-slate-50 border-transparent focus:bg-white focus:border-primary/20 focus:ring-primary/10 rounded-2xl transition-all"
+                                    className="h-14 bg-slate-50 border-transparent focus:bg-white focus:border-primary/20 focus:ring-primary/10 rounded-2xl transition-all text-slate-900"
                                 />
                             </div>
                             <div className="space-y-1.5">
@@ -119,7 +116,7 @@ export default function SignUp() {
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
-                                    className="h-14 bg-slate-50 border-transparent focus:bg-white focus:border-primary/20 focus:ring-primary/10 rounded-2xl transition-all"
+                                    className="h-14 bg-slate-50 border-transparent focus:bg-white focus:border-primary/20 focus:ring-primary/10 rounded-2xl transition-all text-slate-900"
                                 />
                             </div>
                             <div className="space-y-1.5">
@@ -130,7 +127,7 @@ export default function SignUp() {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
-                                    className="h-14 bg-slate-50 border-transparent focus:bg-white focus:border-primary/20 focus:ring-primary/10 rounded-2xl transition-all"
+                                    className="h-14 bg-slate-50 border-transparent focus:bg-white focus:border-primary/20 focus:ring-primary/10 rounded-2xl transition-all text-slate-900"
                                 />
                             </div>
 

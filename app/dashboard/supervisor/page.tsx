@@ -29,18 +29,15 @@ export default function SupervisorDashboard() {
 
             tl.from(".stat-card", {
                 y: 30,
-                opacity: 0,
                 stagger: 0.1,
                 ease: "back.out(1.7)"
             })
                 .from(".filter-bar", {
                     y: 20,
-                    opacity: 0,
                     duration: 0.8
                 }, "-=0.5")
                 .from(".feed-item", {
                     scale: 0.95,
-                    opacity: 0,
                     stagger: 0.05,
                     duration: 0.8
                 }, "-=0.4");
@@ -120,8 +117,8 @@ export default function SupervisorDashboard() {
                     </div>
 
                     <div className="flex items-center gap-4 pl-0 sm:pl-6 border-l-0 sm:border-l border-slate-200 ml-auto sm:ml-0">
-                        <Button variant="ghost" size="icon" onClick={handleSignOut} className="w-10 h-10 md:w-12 md:h-12 bg-white rounded-xl md:rounded-2xl border border-slate-100 shadow-sm hover:text-red-500 hover:bg-red-50 transition-all hover:scale-105 active:scale-95 group">
-                            <LogOut className="h-4 w-4 md:h-5 md:w-5 transition-transform group-hover:translate-x-1" />
+                        <Button variant="ghost" size="icon" onClick={handleSignOut} className="w-10 h-10 md:w-12 md:h-12 bg-white rounded-xl md:rounded-2xl border-2 border-slate-200 shadow-md hover:text-red-600 hover:bg-red-50 transition-all hover:scale-105 active:scale-95 group">
+                            <LogOut className="h-4 w-4 md:h-5 md:w-5 text-slate-600 transition-transform group-hover:translate-x-1 group-hover:text-red-600" />
                         </Button>
                     </div>
                 </div>
@@ -129,42 +126,49 @@ export default function SupervisorDashboard() {
 
             <main className="flex-1 container mx-auto px-6 md:px-16 pb-24 z-20 max-w-[1600px]">
                 {/* Stats & Trends Section */}
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-12">
-                    <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <div className="stat-card bg-white p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-white shadow-2xl shadow-slate-200/40 relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-primary/10 transition-colors" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12 items-stretch">
+                    <div className="stat-card bg-white p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-white shadow-2xl shadow-slate-200/40 relative overflow-hidden group flex flex-col justify-between min-h-[160px] md:min-h-[200px]">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-primary/10 transition-colors" />
+                        <div>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">Ongoing Reports</p>
                             <div className="text-4xl md:text-5xl font-black text-[#1A1C3D]">{reports.filter(r => r.status === 'pending').length}</div>
-                            <div className="flex items-center gap-2 mt-4">
-                                <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-full">+2 Today</span>
-                            </div>
                         </div>
-                        <div className="stat-card bg-white p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-white shadow-2xl shadow-slate-200/40 relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-emerald-500/10 transition-colors" />
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">Total Verified</p>
-                            <div className="text-4xl md:text-5xl font-black text-[#1A1C3D]">{reports.filter(r => r.status === 'approved').length}</div>
-                            <div className="flex items-center gap-2 mt-4 text-slate-400">
-                                <span className="text-[10px] font-bold">Updated Just Now</span>
-                            </div>
-                        </div>
-                        <div className="stat-card bg-[#1A1C3D] p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] shadow-2xl shadow-indigo-900/20 relative overflow-hidden group sm:col-span-2 lg:col-span-1">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-primary/30 transition-colors" />
-                            <p className="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em] mb-4">Action Accuracy</p>
-                            <div className="text-4xl md:text-5xl font-black text-white">98.4%</div>
-                            <p className="text-[10px] font-bold text-primary mt-4 uppercase tracking-widest">Efficiency Goal Reached</p>
+                        <div className="flex items-center gap-2 mt-4">
+                            <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-full">+2 Today</span>
                         </div>
                     </div>
 
-                    <div className="stat-card bg-white/40 backdrop-blur-xl p-6 rounded-[2rem] md:rounded-[2.5rem] border border-white/60 shadow-xl flex flex-col justify-between group hover:bg-white/60 transition-all">
+                    <div className="stat-card bg-white p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-white shadow-2xl shadow-slate-200/40 relative overflow-hidden group flex flex-col justify-between min-h-[160px] md:min-h-[200px]">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-emerald-500/10 transition-colors" />
                         <div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">Total Verified</p>
+                            <div className="text-4xl md:text-5xl font-black text-[#1A1C3D]">{reports.filter(r => r.status === 'approved').length}</div>
+                        </div>
+                        <div className="flex items-center gap-2 mt-4 text-slate-400">
+                            <span className="text-[10px] font-bold">Updated Just Now</span>
+                        </div>
+                    </div>
+
+                    <div className="stat-card bg-[#1A1C3D] p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] shadow-2xl shadow-indigo-900/20 relative overflow-hidden group flex flex-col justify-between min-h-[160px] md:min-h-[200px]">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-primary/30 transition-colors" />
+                        <div>
+                            <p className="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em] mb-4">Action Accuracy</p>
+                            <div className="text-4xl md:text-5xl font-black text-white">98.4%</div>
+                        </div>
+                        <p className="text-[10px] font-bold text-primary mt-4 uppercase tracking-widest">Efficiency Goal Reached</p>
+                    </div>
+
+                    <div className="stat-card bg-white p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-white shadow-2xl shadow-slate-200/40 relative overflow-hidden group flex flex-col justify-between min-h-[160px] md:min-h-[200px] hover:bg-white transition-all">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-primary/5 transition-colors" />
+                        <div className="relative">
                             <p className="text-[10px] font-bold text-[#1A1C3D]/40 uppercase tracking-[0.2em] mb-4">Environment Trend</p>
-                            <div className="h-20 flex items-end gap-1.5 px-2">
+                            <div className="h-16 md:h-20 flex items-end gap-1.5 px-2">
                                 {[40, 70, 45, 90, 65, 80, 55].map((h, i) => (
                                     <div key={i} style={{ height: `${h}%` }} className="flex-1 bg-primary/20 rounded-t-lg group-hover:bg-primary/40 transition-all" />
                                 ))}
                             </div>
                         </div>
-                        <p className="text-[10px] font-bold text-primary uppercase text-center mt-4">Growth +12.4%</p>
+                        <p className="text-[10px] font-bold text-primary uppercase text-center mt-4 relative">Growth +12.4%</p>
                     </div>
                 </div>
 

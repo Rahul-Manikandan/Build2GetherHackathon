@@ -35,21 +35,17 @@ export default function ReporterDashboard() {
 
             tl.from(".header-section", {
                 y: -20,
-                opacity: 0,
             })
                 .from(".hero-card", {
                     y: 30,
-                    opacity: 0,
                     scale: 0.98,
                 }, "-=0.6")
                 .from(".stats-tile", {
                     y: 20,
-                    opacity: 0,
                     stagger: 0.1,
                 }, "-=0.5")
                 .from(".report-row", {
                     x: -10,
-                    opacity: 0,
                     stagger: 0.05,
                 }, "-=0.4");
         }
@@ -131,14 +127,14 @@ export default function ReporterDashboard() {
                             <span className="w-1 h-0.5 bg-primary rounded-full" />
                         </div>
                         <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Hi {user?.displayName ? user.displayName.split(' ')[0] : 'Reporter'}</h1>
-                        <p className="text-white/50 text-sm mt-1">{stats.pending} reports are pending review</p>
+                        <p className="text-white/70 text-sm mt-1">{stats.pending} reports are pending review</p>
                     </div>
 
                     <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <button className="relative w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center hover:bg-white/10 transition-colors border border-white/10">
-                                    <Bell className="w-6 h-6 text-white/70" />
+                                    <Bell className="w-6 h-6 text-white" />
                                     {notifications.length > 0 && (
                                         <span className="absolute top-3 right-3 w-2 h-2 bg-primary rounded-full" />
                                     )}
@@ -176,13 +172,13 @@ export default function ReporterDashboard() {
 
                     <div className="relative space-y-6">
                         <div className="flex justify-between items-center">
-                            <span className="text-xs font-bold text-white/40 uppercase tracking-[0.2em]">Latest Highlight</span>
+                            <span className="text-xs font-bold text-white/70 uppercase tracking-[0.2em]">Latest Highlight</span>
                             <span className="px-3 py-1 bg-primary text-[10px] font-bold rounded-full group-hover:px-4 transition-all">NEW</span>
                         </div>
 
                         <div>
                             <h2 className="text-xl md:text-2xl font-bold mb-2">Environmental Scan</h2>
-                            <p className="text-white/50 leading-relaxed max-w-sm text-sm md:text-base">
+                            <p className="text-white/80 leading-relaxed max-w-sm text-sm md:text-base">
                                 Track soil erosion patterns and submit real-time reports with AI analysis.
                             </p>
                         </div>
@@ -190,7 +186,7 @@ export default function ReporterDashboard() {
                         <div className="flex items-center justify-between pt-4 border-t border-white/5">
                             <div className="flex -space-x-2">
                                 {[1, 2, 3].map(i => (
-                                    <div key={i} className="w-8 h-8 rounded-full bg-[#110F33] border-2 border-[#1C1A4A] flex items-center justify-center text-[10px] font-bold">AI</div>
+                                    <div key={i} className="w-8 h-8 rounded-full bg-[#110F33] border-2 border-[#1C1A4A] flex items-center justify-center text-[10px] font-bold text-white/80">AI</div>
                                 ))}
                             </div>
                             <Link href="/">
@@ -208,7 +204,7 @@ export default function ReporterDashboard() {
                     <div className="flex justify-between items-center px-2">
                         <h3 className="text-lg font-bold">Activity Overview</h3>
                         <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center border border-white/10">
-                            <Search className="w-4 h-4 text-white/40" />
+                            <Search className="w-4 h-4 text-white/60" />
                         </div>
                     </div>
 
@@ -217,18 +213,18 @@ export default function ReporterDashboard() {
                             <div className="text-4xl md:text-5xl font-bold group-hover:scale-110 transition-transform origin-left">{stats.total}</div>
                             <div className="space-y-1">
                                 <p className="text-xs md:text-sm font-bold opacity-100 uppercase tracking-widest">Total</p>
-                                <p className="text-[9px] md:text-[10px] opacity-40 group-hover:opacity-80 transition-opacity">Submissions</p>
+                                <p className="text-[9px] md:text-[10px] opacity-70 group-hover:opacity-100 transition-opacity">Submissions</p>
                             </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4 lg:col-span-2">
                             <div className="stats-tile bg-[#1C1A4A] p-5 md:p-6 rounded-[2rem] border border-white/5 flex flex-col justify-between hover:border-primary/30 transition-colors">
                                 <div className="text-2xl md:text-3xl font-bold text-primary group-hover:text-white transition-colors">{stats.pending}</div>
-                                <p className="text-[9px] md:text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">Ongoing</p>
+                                <p className="text-[9px] md:text-[10px] font-bold text-white/60 uppercase tracking-[0.2em]">Ongoing</p>
                             </div>
                             <div className="stats-tile bg-[#1C1A4A] p-5 md:p-6 rounded-[2rem] border border-white/5 flex flex-col justify-between hover:border-emerald-500/30 transition-colors">
                                 <div className="text-2xl md:text-3xl font-bold text-emerald-500">{stats.approved}</div>
-                                <p className="text-[9px] md:text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">Verified</p>
+                                <p className="text-[9px] md:text-[10px] font-bold text-white/60 uppercase tracking-[0.2em]">Verified</p>
                             </div>
                         </div>
                     </div>
@@ -249,7 +245,7 @@ export default function ReporterDashboard() {
                                         <CardContent className="p-4 flex items-center gap-4">
                                             <div className="w-14 h-14 bg-[#110F33] rounded-2xl overflow-hidden flex-shrink-0 border border-white/5 group-hover:scale-110 transition-transform">
                                                 {report.imageUrl ? (
-                                                    <img src={report.imageUrl} alt="Scan" className="w-full h-full object-cover opacity-80" />
+                                                    <img src={report.imageUrl} alt="Scan" className="w-full h-full object-cover" />
                                                 ) : (
                                                     <div className="w-full h-full flex items-center justify-center text-white/20">
                                                         <Search className="w-5 h-5" />
@@ -259,13 +255,13 @@ export default function ReporterDashboard() {
                                             <div className="flex-1 min-w-0">
                                                 <h4 className="font-bold text-white text-base truncate">{report.description}</h4>
                                                 <div className="flex items-center gap-2 mt-0.5">
-                                                    <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">
+                                                    <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest">
                                                         {new Date(report.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                                     </p>
                                                     <span className="w-1 h-1 bg-white/10 rounded-full" />
                                                     <p className={`text-[10px] font-bold uppercase tracking-widest ${report.status === 'approved' ? 'text-emerald-500' :
                                                         report.status === 'pending' ? 'text-primary' :
-                                                            'text-white/30'
+                                                            'text-white/50'
                                                         }`}>{report.status}</p>
                                                 </div>
                                             </div>

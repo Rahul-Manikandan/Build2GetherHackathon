@@ -15,23 +15,19 @@ export default function Home() {
 
     tl.from(".hero-art", {
       scale: 0.8,
-      opacity: 0,
       duration: 1.5,
       ease: "expo.out"
     })
       .from(".hero-title > *", {
         y: 60,
-        opacity: 0,
         stagger: 0.2,
       }, "-=0.8")
       .from(".hero-actions > *", {
         y: 20,
-        opacity: 0,
         stagger: 0.1,
       }, "-=0.6")
       .from(".decorative-rings", {
         rotation: -10,
-        opacity: 0,
         duration: 2,
       }, 0);
 
